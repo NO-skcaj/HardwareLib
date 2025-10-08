@@ -38,6 +38,7 @@ namespace subsystem
 
     class SwerveModule
     {
+        
         public:
 
             explicit                   SwerveModule(int driveMotorCanId, int angleMotorCanId, int angleEncoderCanId, 
@@ -64,8 +65,9 @@ namespace subsystem
             hardware::motor::Motor     m_angleMotor;
             hardware::encoder::Encoder m_angleAbsoluteEncoder;
 
-            units::meter_t  m_driveConversion;
-            units::radian_t m_angleConversion;
+            units::meter_t             m_driveConversion;
+            units::radian_t            m_angleConversion;
+
     };
 
 }
