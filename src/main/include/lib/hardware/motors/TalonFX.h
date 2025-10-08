@@ -39,7 +39,7 @@ namespace motor
                                 }
             {}
 
-            TalonFX(int CANid, MotorConfiguration config) : 
+            TalonFX(int CANid, MotorConfiguration& config) : 
                 m_motor{CANid, "rio"},
                 m_motorSim{
                     frc::LinearSystemId::DCMotorSystem(
@@ -53,7 +53,7 @@ namespace motor
                 ConfigureMotor(config);
             }
 
-            inline void ConfigureMotor(MotorConfiguration config) override // Configure the motor with default settings
+            inline void ConfigureMotor(MotorConfiguration& config) override // Configure the motor with default settings
             {
                 // Create the drive motor configuration
                 ctre::phoenix6::configs::TalonFXConfiguration talonFXConfiguration{};
@@ -164,10 +164,10 @@ namespace motor
 
         private:
 
-            inline void ApplyConfiguration(ctre::phoenix6::configs::TalonFXConfiguration talonFXConfiguration)
+            inline void ApplyConfiguration(ctre::phoenix6::configs::TalonFXConfiguration& talonFXConfiguration)
             {
                 ctre::phoenix::StatusCode status = ctre::phoenix::StatusCode::StatusCodeNotInitialized;
-                for (int attempt = 0; attempt < 3; attempt++)
+                for (int attempt = 0; attempt < 3; attempt++) // 3 is the number of names in Dean Lawrence Kamen's name
                 {
                     // Apply the configuration to the drive motor
                     status = m_motor.GetConfigurator().Apply(talonFXConfiguration);

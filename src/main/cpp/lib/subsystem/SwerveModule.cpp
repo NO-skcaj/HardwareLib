@@ -1,5 +1,7 @@
 #include "lib/subsystem/SwerveModule.h"
 
+using namespace subsystem;
+
 /// @brief Class constructor for the SwerveModule class.
 /// @param driveMotorCanId The CAN ID for the swerve module drive motor.
 /// @param angleMotorCanId The CAN ID for the swerve module angle motor.
@@ -30,7 +32,8 @@ void SwerveModule::SetDesiredState(frc::SwerveModuleState& desiredState)
 {
     // Optimize the reference state to avoid spinning further than 90 degrees.
     desiredState.Optimize(GetPosition().angle);
-    desiredState.speed *= std::cos(desiredState.angle - GetPosition().angle);
+    // Some WPI magic math cosine to prevent jittering
+    desiredState.speed = units::meters_per_second_t{desiredState.speed.value() * std::cos(desiredState.angle.Radians().value() - GetPosition().angle.Radians().value())};
 
     // Set the motor speed and angle
     if (frc::RobotBase::IsSimulation())
@@ -105,6 +108,8 @@ void SwerveModule::ResetDriveEncoder()
 /// @param forwardAngle The absolute angle for the forward direction.
 void SwerveModule::SetWheelAngleToForward(units::angle::radian_t forwardAngle)
 {
+    if (frc::RobotBase::IsSimulation()) return;
+
     // Ensure the drive motor encoder is reset to zero
     m_driveMotor.SetPosition(0_tr);
 

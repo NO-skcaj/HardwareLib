@@ -8,6 +8,8 @@
 #include <units/voltage.h>
 #include <units/current.h>
 
+#include "lib/hardware/hardware.h"
+
 
 namespace hardware
 {
@@ -45,7 +47,7 @@ namespace motor
     };
 
     // This class is used to abstract the motor controller interface
-    class Motor
+    class Motor : public Hardware
     {
         public:
             

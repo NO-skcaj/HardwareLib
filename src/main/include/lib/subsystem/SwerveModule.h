@@ -33,34 +33,39 @@
 #include "lib/hardware/motors/MotorFactory.h"
 
 
-class SwerveModule
+namespace subsystem
 {
-    public:
 
-        explicit                   SwerveModule(int driveMotorCanId, int angleMotorCanId, int angleEncoderCanId, 
-                                                hardware::motor::MotorConfiguration& turnConfig, hardware::motor::MotorConfiguration& driveConfig,
-                                                units::meter_t driveMotorConversion, units::radian_t angleMotorConversion);
+    class SwerveModule
+    {
+        public:
 
-        void                       SetDesiredState(frc::SwerveModuleState& state);  // Sets the desired state for the module
+            explicit                   SwerveModule(int driveMotorCanId, int angleMotorCanId, int angleEncoderCanId, 
+                                                    hardware::motor::MotorConfiguration& turnConfig, hardware::motor::MotorConfiguration& driveConfig,
+                                                    units::meter_t driveMotorConversion, units::radian_t angleMotorConversion);
 
-        frc::SwerveModuleState     GetState();                                            // Returns the current state of the module
+            void                       SetDesiredState(frc::SwerveModuleState& state);  // Sets the desired state for the module
 
-        frc::SwerveModulePosition  GetPosition();                                         // Returns the current position of the module
+            frc::SwerveModuleState     GetState();                                            // Returns the current state of the module
 
-        void                       ResetDriveEncoder();                                   // Zeroes all the  encoders
+            frc::SwerveModulePosition  GetPosition();                                         // Returns the current position of the module
 
-        void                       SetWheelAngleToForward(units::angle::radian_t desiredAngle);
+            void                       ResetDriveEncoder();                                   // Zeroes all the  encoders
 
-        void                       SimPeriodic();
+            void                       SetWheelAngleToForward(units::angle::radian_t desiredAngle);
 
-    private:
+            void                       SimPeriodic();
 
-        units::angle::radian_t     GetAbsoluteEncoderAngle();
+        private:
 
-        hardware::motor::Motor     m_driveMotor;
-        hardware::motor::Motor     m_angleMotor;
-        hardware::encoder::Encoder m_angleAbsoluteEncoder;
+            units::angle::radian_t     GetAbsoluteEncoderAngle();
 
-        units::meter_t  m_driveConversion;
-        units::radian_t m_angleConversion;
-};
+            hardware::motor::Motor     m_driveMotor;
+            hardware::motor::Motor     m_angleMotor;
+            hardware::encoder::Encoder m_angleAbsoluteEncoder;
+
+            units::meter_t  m_driveConversion;
+            units::radian_t m_angleConversion;
+    };
+
+}

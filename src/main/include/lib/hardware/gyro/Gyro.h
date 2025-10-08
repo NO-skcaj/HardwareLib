@@ -4,15 +4,21 @@
 
 #include <frc/geometry/Rotation3d.h>
 
+#include "lib/hardware/hardware.h"
 
-class Gyro
+namespace hardware
 {
-    public:
-        virtual frc::Rotation3d GetRotation() = 0;
 
-        virtual frc::Rotation3d GetOffset() = 0;
+    class Gyro : public Hardware
+    {
+        public:
+            virtual frc::Rotation3d GetRotation() = 0;
 
-        virtual void            ResetYaw() = 0;
+            virtual frc::Rotation3d GetOffset() = 0;
 
-        virtual void            SetOffset(frc::Rotation3d offset) = 0;
-};
+            virtual void            ResetYaw() = 0;
+
+            virtual void            SetOffset(frc::Rotation3d offset) = 0;
+    };
+
+}
