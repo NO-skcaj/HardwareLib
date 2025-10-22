@@ -55,8 +55,6 @@ namespace subsystem
 
             void                       SetWheelAngleToForward(units::angle::radian_t desiredAngle);
 
-            void                       SimPeriodic();
-
         private:
 
             units::angle::radian_t     GetAbsoluteEncoderAngle();

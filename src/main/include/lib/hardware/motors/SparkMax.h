@@ -5,10 +5,13 @@
 #include <iostream>
 
 #include <frc/system/plant/DCMotor.h>
+#include <frc/simulation/DCMotorSim.h>
+#include <frc/system/plant/LinearSystemId.h>
 
-#include <rev/SparkSim.h>
+#include <frc/controller/SimpleMotorFeedforward.h>
 
 #include <rev/SparkMax.h>
+#include <rev/SparkLowLevel.h>
 #include <rev/config/SparkMaxConfig.h>
 
 
@@ -22,23 +25,27 @@ namespace motor
     class SparkMax : public Motor
     {
         public:
-            inline SparkMax(int CANid, bool isBrushless) 
-                :   m_motor{CANid, isBrushless ? rev::spark::SparkMax::MotorType::kBrushless : rev::spark::SparkMax::MotorType::kBrushed},
-                    m_angleEncoder{m_motor.GetEncoder()}, 
-                    m_turnClosedLoopController{m_motor.GetClosedLoopController()}
-                    // m_motorSim{m_motor, frc::DCMotor::NEO(1)}
-            {}
 
-            inline SparkMax(int CANid, bool isBrushless, MotorConfiguration config) : 
-                m_motor{CANid, isBrushless ? rev::spark::SparkMax::MotorType::kBrushless : rev::spark::SparkMax::MotorType::kBrushed},
+            inline SparkMax(int CANid, MotorConfiguration config, frc::DCMotor motorType) 
+            :   m_motor{CANid, config.brakeMode 
+                                ? rev::spark::SparkLowLevel::MotorType::kBrushless 
+                                : rev::spark::SparkLowLevel::MotorType::kBrushed},
                 m_angleEncoder{m_motor.GetEncoder()}, 
                 m_turnClosedLoopController{m_motor.GetClosedLoopController()}
-                // m_motorSim{m_motor, frc::DCMotor::NEO(1)}
+                m_motorSim{
+                    frc::LinearSystemId::DCMotorSystem(
+                        motorType,
+                        0.001_kg_sq_m,
+                        1
+                    ),
+                    motorType
+                }
             {
+                ConfigureRealMotor(config);
                 ConfigureMotor(config);
             }
 
-            inline void ConfigureMotor(MotorConfiguration config) override // Configure the motor with default settings
+            inline void ConfigureRealMotor(MotorConfiguration config) // Configure the motor with default settings
             {
                 // Configure the angle motor
                 rev::spark::SparkMaxConfig sparkMaxConfig{};
@@ -47,66 +54,48 @@ namespace motor
                 sparkMaxConfig
                     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake)
                     .SmartCurrentLimit(config.CurrentLimit.value());
-
-                // sparkMaxConfig.encoder
-                //     .PositionConversionFactor(config.PositionConversionFactor)
-                //     .VelocityConversionFactor(config.VelocityConversionFactor); // not using these as to stay consistent with the TalonFX vice versa
+                    
+                // All you have to do for encoders is make sure that they are in turns. If a particular motor only does counts... submit a pull request.
 
                 // Configure the closed loop controller
                 sparkMaxConfig.closedLoop
                     .SetFeedbackSensor(rev::spark::ClosedLoopConfig::FeedbackSensor::kPrimaryEncoder)
-                    .Pid(config.PID.P, config.PID.I, config.PID.D);
+                    .Pid(0.0,0.0,0.0); // Do not use the onboard PID controller
 
                 // Write the configuration to the motor controller
                 m_motor.Configure(sparkMaxConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters, rev::spark::SparkMax::PersistMode::kPersistParameters);
             }
 
-            inline void SetSpeed(double motorInput) override // output to motor within (-1,1)
-            {
-                m_turnClosedLoopController.SetReference(motorInput, rev::spark::SparkMax::ControlType::kDutyCycle);
-            }
-
-            inline void SetSpeed(units::turns_per_second_t motorInput) override // output to motor within (-1,1)
-            {
-                m_turnClosedLoopController.SetReference(motorInput.value(), rev::spark::SparkMax::ControlType::kVelocity);
-            }
-
-            inline void SetSpeed(units::volt_t motorInput) override // output to motor within (-1,1)
-            {
-                m_turnClosedLoopController.SetReference(motorInput.value(), rev::spark::SparkMax::ControlType::kVoltage);
-            }
-
-            inline void SetPosition(units::turn_t motorInput) override // output to motor in turns
-            {
-                m_turnClosedLoopController.SetReference(motorInput.value(), rev::spark::SparkMax::ControlType::kPosition);
-            }
-
             inline units::turn_t GetPosition() override // Returns the position of the motor in turns
             {
-                return units::turn_t{m_angleEncoder.GetPosition()};
+                return frc::RobotBase::IsSimulation()
+                    ? units::turn_t{m_motorSim.GetAngularPosition().value() / (2 * std::numbers::pi)} 
+                    : units::turn_t{m_angleEncoder.GetPosition()};
             }
 
-            inline units::turns_per_second_t GetVelocity() override // Returns the velocity of the motor in turns
+            inline units::turns_per_second_t GetVelocity() override // Returns the velocity of the motor in turn velocity
             {
-                return units::turns_per_second_t{m_angleEncoder.GetVelocity()};
+                return frc::RobotBase::IsSimulation() 
+                    ? units::turns_per_second_t{m_motorSim.GetAngularVelocity().value() / (2 * std::numbers::pi)} 
+                    : units::turns_per_second_t{m_angleEncoder.GetVelocity()};
             }
 
-            inline void OffsetEncoder(units::turn_t offset) override // Returns the current of the motor in amps
+            inline void OffsetEncoder(units::turn_t offset) override
             {
                 m_angleEncoder.SetPosition(offset.value());
             }
 
-            inline void SimPeriodic() override // Simulate the motor
-            {
-                
-            }
-
         private:
-            rev::spark::SparkMax                  m_motor;                    // SparkMax motor controller
-            rev::spark::SparkRelativeEncoder      m_angleEncoder;             // Relative encoder onboard the sparkmax
-            rev::spark::SparkClosedLoopController m_turnClosedLoopController; // PID Controller for SparkMax
 
-            // rev::spark::SparkSim                  m_motorSim;                 // Simulation model for SparkMax
+            int help = 0;
+
+            rev::spark::SparkMax                       m_motor;                    // SparkMax motor controller
+            rev::spark::SparkRelativeEncoder           m_angleEncoder;             // Relative encoder onboard the sparkmax
+            rev::spark::SparkClosedLoopController      m_turnClosedLoopController; // PID Controller for SparkMax
+
+            frc::sim::DCMotorSim                       m_motorSim; // Simulated motor model
+            frc::SimpleMotorFeedforward<units::meters> m_feedForwards;
+
     };
 }
 
