@@ -8,7 +8,10 @@
 #include <units/voltage.h>
 #include <units/current.h>
 
+#include <frc/RobotBase.h>
+
 #include "lib/hardware/hardware.h"
+#include "lib/MotorController.h"
 
 
 namespace hardware
@@ -17,33 +20,9 @@ namespace hardware
 namespace motor
 {
 
-    struct PIDConfiguration
+    struct MotorConfiguration : public ControlConfiguration
     {
-        double P;
-        double I;
-        double D;
-    };
-
-    struct FeedForwardConfiguration
-    {
-        double S;
-        double V;
-        double A;
-    };
-
-    struct MagicMotionConfiguration
-    {
-        units::turns_per_second_t         TargetVelocity;
-        units::turns_per_second_squared_t TargetAcceleration; 
-        units::turns_per_second_cubed_t   TargetJerk;
-    };
-
-    struct MotorConfiguration
-    {
-        units::ampere_t                         CurrentLimit;
-        PIDConfiguration                        PID;
-        std::optional<FeedForwardConfiguration> FeedForward;
-        std::optional<MagicMotionConfiguration> MagicMotion;
+        units::ampere_t          CurrentLimit;
     };
 
     // This class is used to abstract the motor controller interface
@@ -51,29 +30,29 @@ namespace motor
     {
         public:
             
-            virtual void ConfigureMotor(MotorConfiguration config) {};
+            virtual void ConfigureMotor(hardware::motor::MotorConfiguration config) {  }
 
             // output to motor
-            virtual void SetSpeed(double                    motorInput) {};
-            virtual void SetSpeed(units::turns_per_second_t motorInput) {};
-            virtual void SetSpeed(units::volt_t             motorInput) {};
-
-            // positional control
-            virtual void SetPosition(units::turn_t motorInput) {};
+            virtual void Set(double                    motorInput) {}
+            virtual void Set(units::volt_t             motorInput) {}
+            virtual void Set(units::turns_per_second_t motorInput) {}
+            virtual void Set(units::turn_t             motorInput) {}
 
             // set the encoder position to an offset, useful for zeroing the encoder
-            virtual void OffsetEncoder(units::turn_t offset) {};
+            virtual void OffsetEncoder(units::turn_t offset) {}
 
             // get the current position according to the motor
-            virtual units::turn_t GetPosition() { return 0_tr; };
+            virtual units::turn_t GetPosition() { return 0_tr; }
             
             // get the velocity of the motor in turns per second
-            virtual units::turns_per_second_t GetVelocity() { return 0_tps; };
+            virtual units::turns_per_second_t GetVelocity() { return 0_tps; }
+
+            virtual void Periodic () override { if (frc::RobotBase::IsSimulation()) SimPeriodic(); } // runs every robot cycle
 
             // runs every periodic cycle
-            virtual void SimPeriodic() {};
+            virtual void SimPeriodic() {}
     };
 
-}
+};
 
-}
+};

@@ -27,10 +27,10 @@
 #include <frc/kinematics/SwerveDriveKinematics.h>
 #include <frc/kinematics/SwerveDriveOdometry.h>
 
-#include <frc2/command/SubsystemBase.h>
+#include "lib/hardware/encoders/CANCoder.h"
+#include "lib/hardware/motors/TalonFX.h"
 
-#include "lib/hardware/encoders/EncoderFactory.h"
-#include "lib/hardware/motors/MotorFactory.h"
+#include "lib/hardware/motors/Motor.h"
 
 
 namespace subsystem
@@ -42,7 +42,7 @@ namespace subsystem
         public:
 
             explicit                   SwerveModule(int driveMotorCanId, int angleMotorCanId, int angleEncoderCanId, 
-                                                    hardware::motor::MotorConfiguration& turnConfig, hardware::motor::MotorConfiguration& driveConfig,
+                                                    hardware::motor::MotorConfiguration turnConfig, hardware::motor::MotorConfiguration driveConfig,
                                                     units::meter_t driveMotorConversion, units::radian_t angleMotorConversion);
 
             void                       SetDesiredState(frc::SwerveModuleState& state);  // Sets the desired state for the module
@@ -61,9 +61,9 @@ namespace subsystem
 
             units::angle::radian_t     GetAbsoluteEncoderAngle();
 
-            hardware::motor::Motor     m_driveMotor;
-            hardware::motor::Motor     m_angleMotor;
-            hardware::encoder::Encoder m_angleAbsoluteEncoder;
+            hardware::motor::TalonFX     m_driveMotor;
+            hardware::motor::TalonFX     m_angleMotor;
+            hardware::encoder::CANCoder  m_angleAbsoluteEncoder;
 
             units::meter_t             m_driveConversion;
             units::radian_t            m_angleConversion;
