@@ -7,7 +7,12 @@
 #include <optional>
 
 #include <frc/TimedRobot.h>
-#include <frc2/command/CommandPtr.h>
+
+#include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/XboxController.h>
+
+#include "lib/hardware/motors/SparkMax.h"
+
 
 class Robot : public frc::TimedRobot {
   public:
@@ -27,4 +32,9 @@ class Robot : public frc::TimedRobot {
     void TestExit() override;
 
   private:
+
+  hardware::motor::SparkMax m_testMotor;
+
+  frc::XboxController m_driverController;
+
 };

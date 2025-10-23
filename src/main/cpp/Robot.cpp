@@ -1,14 +1,24 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
-
 #include "Robot.h"
 
-#include <frc2/command/CommandScheduler.h>
 
-Robot::Robot() {}
+Robot::Robot() 
+  : m_testMotor{1, 
+                hardware::motor::MotorConfiguration{30_A, true, 
+                1.0, 0.0, 0.0, 
+                0.0, 0.0, 0.0}, 
+                frc::DCMotor::NEO()
+  },
+  m_driverController{0}
+{
+}
 
-void Robot::RobotPeriodic() {
+void Robot::RobotPeriodic()
+{
+  m_testMotor.SetReferenceState(units::turns_per_second_t{m_driverController.GetRawAxis(1)});
+  m_testMotor.Periodic();
+  frc::SmartDashboard::PutNumber("Test Motor Position", m_testMotor.GetPosition().value());
+  frc::SmartDashboard::PutNumber("Test Motor Velocity", m_testMotor.GetVelocity().value());
+  frc::SmartDashboard::PutNumber("Input", m_driverController.GetRawAxis(1));
   frc2::CommandScheduler::GetInstance().Run();
 }
 

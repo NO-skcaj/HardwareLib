@@ -19,6 +19,8 @@
 
 #include "lib/hardware/hardware.h"
 
+// Temp
+#include <frc/smartdashboard/SmartDashboard.h>
 
 namespace hardware
 {
@@ -46,7 +48,7 @@ namespace motor
 
             Motor() 
                 : m_feedForwards{0_V, 0_V * 1_s / 1_m, 0_V * 1_s * 1_s / 1_m},
-                  m_pidController{0.0, 0.0, 0.0},
+                  m_pidController{1.0, 0.0, 0.0},
                   m_motorSim{
                       frc::LinearSystemId::DCMotorSystem(
                           frc::DCMotor::KrakenX60(),
@@ -124,30 +126,20 @@ namespace motor
                         SetVoltage(0_V);
                         break;
                 }
+
+                SetVoltage(m_currentInput);
             }
 
-            virtual units::turn_t GetPosition() // need to override
-            {
-                return units::turn_t{0};
-            }
+            virtual units::turn_t GetPosition() = 0;
 
-            virtual units::turns_per_second_t GetVelocity() // need to override
-            {
-                return units::turns_per_second_t{0};
-            }
+            virtual units::turns_per_second_t GetVelocity() = 0;
 
-            virtual void OffsetEncoder(units::turn_t offset)
-            {
-                // do nothing, need to override
-            }
+            virtual void OffsetEncoder(units::turn_t offset) = 0;
 
 
         protected:
 
-            virtual void SetVoltage(units::volt_t voltage) // need to override
-            {
-
-            }
+            virtual void SetVoltage(units::volt_t voltage) = 0;
 
         private:
 
@@ -172,7 +164,7 @@ namespace motor
             LastInput  m_lastInput;
             
             // runs every periodic cycle
-            void SimPeriodic() 
+            virtual void SimPeriodic() 
             {
                 m_motorSim.SetInputVoltage(m_currentInput);
                 m_motorSim.Update(20_ms); // assume 20 ms loop time

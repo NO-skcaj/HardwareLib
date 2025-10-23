@@ -29,22 +29,22 @@ namespace motor
     {
         public:
 
-            inline TalonFX(int CANid, MotorConfiguration& config, frc::DCMotor motorType) : 
+            inline TalonFX(int CANid, MotorConfiguration config, frc::DCMotor motorModel) : 
                 m_motor{CANid, "rio"},
                 m_motorSim{
                     frc::LinearSystemId::DCMotorSystem(
-                        motorType,
+                        motorModel,
                         0.001_kg_sq_m,
                         1
                     ),
-                    motorType
+                    motorModel
                 }
             {
                 ConfigureRealMotor(config);
                 ConfigureMotor(config);
             }
 
-            inline void ConfigureRealMotor(MotorConfiguration& config) // Configure the motor with default settings
+            inline void ConfigureRealMotor(MotorConfiguration config) // Configure the motor with default settings
             {
                 // Create the drive motor configuration
                 ctre::phoenix6::configs::TalonFXConfiguration talonFXConfiguration{};
@@ -62,7 +62,7 @@ namespace motor
                 // Add the "Slot0" section settings
                 // PID Controls and optional feedforward controls
                 ctre::phoenix6::configs::Slot0Configs &slot0Configs = talonFXConfiguration.Slot0;
-                slot0Configs.kP = 0.0; // Do not use onboard PID controller
+                slot0Configs.kP = 1.0; // Do not use onboard PID controller
                 slot0Configs.kI = 0.0;
                 slot0Configs.kD = 0.0;
 
@@ -71,12 +71,20 @@ namespace motor
 
             inline units::turn_t GetPosition() override // Returns the position of the motor in turns
             {
-                return m_motor.GetPosition().GetValue(); // might need to do m_motorSim for simulation
+                if (frc::RobotBase::IsSimulation())
+                {
+                    return units::turn_t{m_motorSim.GetAngularPosition().value()};
+                }
+                return m_motor.GetPosition().GetValue();
             }
 
             inline units::turns_per_second_t GetVelocity() override // Returns the velocity of the motor in turns
             {
-                return m_motor.GetVelocity().GetValue(); // might need to do m_motorSim for simulation
+                if (frc::RobotBase::IsSimulation())
+                {
+                    return units::turns_per_second_t{m_motorSim.GetAngularVelocity().value()};
+                }
+                return m_motor.GetVelocity().GetValue();
             }
 
             inline void OffsetEncoder(units::turn_t offset) override // Returns the current of the motor in amps
@@ -85,6 +93,32 @@ namespace motor
             }
 
         private:
+
+            void SetVoltage(units::volt_t voltage) override // sets the voltage to the motor
+            {
+                m_motor.SetVoltage(voltage);
+                m_motorSim.SetInputVoltage(voltage);
+            }
+
+            void SimPeriodic() override
+            {
+                auto& talonFXSim = m_motor.GetSimState();
+
+                // Set the supply voltage of the TalonFX
+                talonFXSim.SetSupplyVoltage(frc::RobotController::GetBatteryVoltage());
+
+                // Get the motor voltage of the TalonFX
+                auto motorVoltage = talonFXSim.GetMotorVoltage();
+
+                // Use the motor voltage to calculate new position and velocity
+                m_motorSim.SetInputVoltage(motorVoltage);
+                m_motorSim.Update(20_ms); // Assume 20 ms loop time
+
+                // Apply the new rotor position and velocity to the TalonFX
+                double gearRatio = 1.0; // Replace with your actual gear ratio
+                talonFXSim.SetRawRotorPosition(m_motorSim.GetAngularPosition() * gearRatio);
+                talonFXSim.SetRotorVelocity(m_motorSim.GetAngularVelocity() * gearRatio);
+            }
 
             inline void ApplyConfiguration(ctre::phoenix6::configs::TalonFXConfiguration& talonFXConfiguration)
             {
