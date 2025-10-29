@@ -9,7 +9,10 @@
 namespace hardware
 {
 
-    class Gyro : public Hardware
+namespace gyro
+{
+
+    class GyroBase : public Hardware
     {
         public:
             virtual frc::Rotation3d GetRotation() = 0;
@@ -20,5 +23,7 @@ namespace hardware
 
             virtual void            SetOffset(frc::Rotation3d offset) = 0;
     };
+
+}
 
 }

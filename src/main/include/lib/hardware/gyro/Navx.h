@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Gyro.h"
+#include "GyroBase.h"
 
 #include "studica/AHRS.h"
 
@@ -14,12 +14,20 @@
 namespace hardware
 {
 
+namespace gyro
+{
+
     // NavX class to support the NavX gyro
-    class Navx : public Gyro
+    class Navx : public GyroBase
     {
         public:
-        
-            static Navx* GetInstance();
+
+            static Navx* GetInstance()
+            {
+                static Navx instance;
+                static Navx* instancePtr = &instance;
+                return instancePtr;
+            }
 
             // Get the rotation of the gyro
             frc::Rotation3d GetRotation() override;
@@ -35,7 +43,7 @@ namespace hardware
 
             void SimPeriodic(units::radians_per_second_t rate); // updates in sim
 
-        private:
+        protected:
             // Constructor for the NavX class
             Navx() : m_gyro   {studica::AHRS::NavXComType::kMXP_SPI},
                     m_offset {0_deg, 0_deg, 0_deg},
@@ -43,7 +51,7 @@ namespace hardware
                     m_simRate{0.0} 
             {}
 
-            static Navx* m_instance; // The singleton instance
+        private:
 
             studica::AHRS m_gyro;     // NavX gyro
 
@@ -52,5 +60,7 @@ namespace hardware
             units::radian_t             m_simYaw;
             units::radians_per_second_t m_simRate;
     };
+
+}
 
 }

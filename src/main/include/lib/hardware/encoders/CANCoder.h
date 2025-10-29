@@ -17,8 +17,8 @@ namespace encoder
         public:
             // Constructor for the CANCoder class
             // The CANCoder is a CAN device, so the CAN ID is passed in
-            CANCoder(int CanId) 
-                : m_encoder{CanId, "rio"}
+            CANCoder(CANid_t CANid) 
+                : m_encoder{CANid, "rio"}
             {}
 
             // Configure the CANCoder

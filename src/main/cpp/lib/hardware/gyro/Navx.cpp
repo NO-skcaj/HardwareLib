@@ -1,18 +1,8 @@
 #include "lib/hardware/gyro/Navx.h"
 
 
-using namespace hardware;
+using namespace hardware::gyro;
 
-Navx* Navx::m_instance = nullptr;
-
-Navx* Navx::GetInstance()
-{
-    if (m_instance == nullptr)
-    {
-        m_instance = new Navx();
-    }
-    return m_instance;
-}
 
 frc::Rotation3d Navx::GetRotation()
 {

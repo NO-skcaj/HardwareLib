@@ -29,22 +29,22 @@ namespace motor
     {
         public:
 
-            inline TalonFX(int CANid, MotorConfiguration config, frc::DCMotor motorModel) : 
-                m_motor{CANid, "rio"},
-                m_motorSim{
+            inline TalonFX(CANid_t CANid, MotorConfiguration config, frc::DCMotor motorModel) 
+                : Motor{frc::sim::DCMotorSim{
                     frc::LinearSystemId::DCMotorSystem(
-                        motorModel,
-                        0.001_kg_sq_m,
-                        1
-                    ),
-                    motorModel
-                }
+                            motorModel,
+                            0.001_kg_sq_m,
+                            1
+                        ),
+                        motorModel
+                    }
+                  },
+                  m_motor{CANid, "rio"}
             {
-                ConfigureRealMotor(config);
                 ConfigureMotor(config);
             }
 
-            inline void ConfigureRealMotor(MotorConfiguration config) // Configure the motor with default settings
+            inline void ConfigureMotor(MotorConfiguration config) override // Configure the motor with default settings
             {
                 // Create the drive motor configuration
                 ctre::phoenix6::configs::TalonFXConfiguration talonFXConfiguration{};
@@ -62,11 +62,58 @@ namespace motor
                 // Add the "Slot0" section settings
                 // PID Controls and optional feedforward controls
                 ctre::phoenix6::configs::Slot0Configs &slot0Configs = talonFXConfiguration.Slot0;
-                slot0Configs.kP = 1.0; // Do not use onboard PID controller
-                slot0Configs.kI = 0.0;
-                slot0Configs.kD = 0.0;
+                slot0Configs.kP = config.P;
+                slot0Configs.kI = config.I;
+                slot0Configs.kD = config.D;
+                slot0Configs.kS = config.S;
+                slot0Configs.kV = config.V;
+                slot0Configs.kA = config.A;
 
-                ApplyConfiguration(talonFXConfiguration);
+                // Try to apply the configuration multiple times in case of failure
+                ctre::phoenix::StatusCode status = ctre::phoenix::StatusCode::StatusCodeNotInitialized;
+                for (int attempt = 0; attempt < 3; attempt++) // 3 is the number of names in Dean Lawrence Kamen's name
+                {
+                    // Apply the configuration to the drive motor
+                    status = m_motor.GetConfigurator().Apply(talonFXConfiguration);
+                    // Check if the configuration was successful
+                    if (status.IsOK())
+                    break;
+                }
+                // Determine if the last configuration load was successful
+                if (!status.IsOK())
+                    std::cout << "***** ERROR: Could not configure TalonFX motor (" << m_motor.GetDeviceID() <<"). Error: " << status.GetName() << std::endl;
+            }
+
+            inline void SetReferenceState(double motorInput) override // output to motor within (-1,1)
+            {
+                // Set the motor speed and angle
+                m_motor.Set(motorInput);
+
+                m_motorSim.SetInputVoltage(motorInput * frc::RobotController::GetBatteryVoltage());
+            }
+
+            inline void SetReferenceState(units::turns_per_second_t motorInput) override // output to motor within (-1,1)
+            {
+                // Set the motor speed and angle
+                m_motor.SetControl(ctre::phoenix6::controls::VelocityVoltage(motorInput));
+
+                m_motorSim.SetAngularVelocity(units::radians_per_second_t{motorInput.value()});
+            }
+
+            inline void SetReferenceState(units::volt_t motorInput) override // output to motor within (-1,1)
+            {
+                // Set the motor speed and angle
+                m_motor.SetVoltage(motorInput);
+
+                m_motorSim.SetInputVoltage(motorInput);
+            }
+
+            inline void SetReferenceState(units::turn_t motorInput) override // output to motor in turns
+            {
+                // Set the arm set position
+                m_motor.SetControl(m_motionMagicVoltage.WithPosition(motorInput).WithSlot(0));
+
+                m_motorSim.SetAngle(units::radian_t{motorInput.value()});
             }
 
             inline units::turn_t GetPosition() override // Returns the position of the motor in turns
@@ -92,15 +139,7 @@ namespace motor
                 m_motor.SetPosition(offset);
             }
 
-        private:
-
-            void SetVoltage(units::volt_t voltage) override // sets the voltage to the motor
-            {
-                m_motor.SetVoltage(voltage);
-                m_motorSim.SetInputVoltage(voltage);
-            }
-
-            void SimPeriodic() override
+            inline void SimPeriodic() override
             {
                 auto& talonFXSim = m_motor.GetSimState();
 
@@ -112,33 +151,16 @@ namespace motor
 
                 // Use the motor voltage to calculate new position and velocity
                 m_motorSim.SetInputVoltage(motorVoltage);
-                m_motorSim.Update(20_ms); // Assume 20 ms loop time
+                m_motorSim.Update(20_ms);
 
                 // Apply the new rotor position and velocity to the TalonFX
-                double gearRatio = 1.0; // Replace with your actual gear ratio
-                talonFXSim.SetRawRotorPosition(m_motorSim.GetAngularPosition() * gearRatio);
-                talonFXSim.SetRotorVelocity(m_motorSim.GetAngularVelocity() * gearRatio);
+                talonFXSim.SetRawRotorPosition(units::turn_t{m_motorSim.GetAngularPosition().value()});
+                talonFXSim.SetRotorVelocity(units::turns_per_second_t{m_motorSim.GetAngularVelocity().value()});
             }
 
-            inline void ApplyConfiguration(ctre::phoenix6::configs::TalonFXConfiguration& talonFXConfiguration)
-            {
-                ctre::phoenix::StatusCode status = ctre::phoenix::StatusCode::StatusCodeNotInitialized;
-                for (int attempt = 0; attempt < 3; attempt++) // 3 is the number of names in Dean Lawrence Kamen's name
-                {
-                    // Apply the configuration to the drive motor
-                    status = m_motor.GetConfigurator().Apply(talonFXConfiguration);
-                    // Check if the configuration was successful
-                    if (status.IsOK())
-                    break;
-                }
-                // Determine if the last configuration load was successful
-                if (!status.IsOK())
-                    std::cout << "***** ERROR: Could not configure TalonFX motor (" << m_motor.GetDeviceID() <<"). Error: " << status.GetName() << std::endl;
-            }
-
+        private:
 
             ctre::phoenix6::hardware::TalonFX             m_motor;    // TalonFX motor controller
-            frc::sim::DCMotorSim                          m_motorSim; // Simulated motor model   
             
             ctre::phoenix6::controls::MotionMagicVoltage m_motionMagicVoltage{0_tr};
     };

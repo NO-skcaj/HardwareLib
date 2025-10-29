@@ -4,37 +4,20 @@
 
 #pragma once
 
-#include <optional>
-
 #include <frc/TimedRobot.h>
+#include <hal/FRCUsageReporting.h>
 
-#include <frc/smartdashboard/SmartDashboard.h>
-#include <frc/XboxController.h>
+#include "lib/Logging.h"
+#include "Controller.h"
 
-#include "lib/hardware/motors/SparkMax.h"
+class Robot : public frc::TimedRobot 
+{
 
-
-class Robot : public frc::TimedRobot {
   public:
+
     Robot();
+    
     void RobotPeriodic() override;
-    void DisabledInit() override;
-    void DisabledPeriodic() override;
-    void DisabledExit() override;
-    void AutonomousInit() override;
-    void AutonomousPeriodic() override;
-    void AutonomousExit() override;
-    void TeleopInit() override;
+
     void TeleopPeriodic() override;
-    void TeleopExit() override;
-    void TestInit() override;
-    void TestPeriodic() override;
-    void TestExit() override;
-
-  private:
-
-  hardware::motor::SparkMax m_testMotor;
-
-  frc::XboxController m_driverController;
-
 };

@@ -15,10 +15,10 @@ SwerveModule::SwerveModule(int driveMotorCanId, int angleMotorCanId, int angleEn
                            units::meter_t  driveMotorConversion,
                            units::radian_t angleMotorConversion)
     :   m_driveMotor          {driveMotorCanId, driveConfig, frc::DCMotor::KrakenX60()},
-        m_angleMotor          {angleMotorCanId, turnConfig,  frc::DCMotor::KrakenX60()},
+        m_angleMotor          {angleMotorCanId, turnConfig,  frc::DCMotor::NEO()},
         m_angleAbsoluteEncoder{angleEncoderCanId},
-        m_driveConversion{driveMotorConversion},
-        m_angleConversion{angleMotorConversion}
+        m_driveConversion{frc::RobotBase::IsSimulation() ? 1_m   : driveMotorConversion},
+        m_angleConversion{frc::RobotBase::IsSimulation() ? 1_rad : angleMotorConversion}
 
 {
     // Ensure the drive motor encoder is reset to zero
@@ -38,36 +38,22 @@ void SwerveModule::SetDesiredState(frc::SwerveModuleState& desiredState)
     // Set the motor speed and angle
     if (frc::RobotBase::IsSimulation())
     {
-        m_driveMotor.SetReferenceState(units::turns_per_second_t(desiredState.speed.value()));
-
-        m_angleMotor.SetReferenceState(units::turn_t(desiredState.angle.Radians().value()));
-    } else
-    {
-        m_driveMotor.SetReferenceState(units::turns_per_second_t(desiredState.speed.value() / m_driveConversion.value()));
-
-        m_angleMotor.SetReferenceState(units::turn_t(desiredState.angle.Radians().value() / m_angleConversion.value()));
+        m_driveMotor.SimPeriodic();
+        m_angleMotor.SimPeriodic();
     }
+
+    m_driveMotor.SetReferenceState(units::turns_per_second_t(desiredState.speed.value() / m_driveConversion.value()));
+    m_angleMotor.SetReferenceState(units::turn_t(desiredState.angle.Radians().value() / m_angleConversion.value()));
 }
 
 /// @brief  Method to retrieve the swerve module state.
 /// @return The swerve module speed and angle state.
 frc::SwerveModuleState SwerveModule::GetState()
-{
-    units::meters_per_second_t driveVelocity{0.0};
-    units::radian_t            anglePosition{0.0};
-
+{   
     // Determine the module wheel velocity
-    if (frc::RobotBase::IsSimulation())
-    {
-        driveVelocity = units::meters_per_second_t{m_driveMotor.GetVelocity().value()};
-
-        anglePosition = units::radian_t{m_angleMotor.GetPosition().value()};
-    } else
-    {
-        driveVelocity = units::meters_per_second_t{m_driveMotor.GetVelocity().value() * m_driveConversion.value()};
-
-        anglePosition = units::radian_t{m_angleMotor.GetPosition().value() * m_angleConversion.value()};
-    }
+    units::meters_per_second_t driveVelocity = units::meters_per_second_t{m_driveMotor.GetVelocity().value() * m_driveConversion.value()};
+    units::radian_t            anglePosition = units::radian_t{m_angleMotor.GetPosition().value() * m_angleConversion.value()};
+        
     // Return the swerve module state
     return {driveVelocity, anglePosition};
 }
@@ -79,20 +65,8 @@ frc::SwerveModulePosition SwerveModule::GetPosition()
     units::radian_t anglePosition{0};
     
     // Determine the module wheel position
-    if (frc::RobotBase::IsSimulation())
-    {
-        drivePosition = m_driveMotor.GetPosition().value() * 1.0_m; // Conversion factor is 1 in sim
-
-        anglePosition = units::radian_t{m_angleMotor.GetPosition().value()};
-
-        // Return the swerve module position
-        return {drivePosition, anglePosition};
-    } else
-    {
-        drivePosition = m_driveMotor.GetPosition().value() * m_driveConversion;
-
-        anglePosition = units::radian_t{m_angleMotor.GetPosition().value() * m_angleConversion};
-    }
+    drivePosition = units::meter_t{m_driveMotor.GetPosition().value() / m_driveConversion.value()};
+    anglePosition = units::radian_t{m_angleMotor.GetPosition().value() / m_angleConversion.value()};
 
     // Return the swerve module position
     return {drivePosition, anglePosition};
@@ -101,7 +75,7 @@ frc::SwerveModulePosition SwerveModule::GetPosition()
 // Reset the drive encoder position.
 void SwerveModule::ResetDriveEncoder()
 {
-    m_driveMotor.SetReferenceState(0_tr);
+    m_driveMotor.OffsetEncoder(0_tr);
 }
 
 /// @brief Method to set the swerve wheel encoder to the forward angle.
