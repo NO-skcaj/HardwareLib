@@ -22,17 +22,15 @@ namespace hardware
 
 namespace motor
 {
-    
-    // needs feedforward and motion magic support
     class SparkMax : public Motor
     {
         public:
 
-            inline SparkMax(CANid_t CANid, MotorConfiguration config, frc::DCMotor motorModel) 
+            inline SparkMax(CANid_t CANid, MotorConfiguration config, frc::DCMotor motorModel, units::kilogram_square_meter_t simMomentOfIntertia = 0.001_kg_sq_m) 
             : Motor{frc::sim::DCMotorSim{
                 frc::LinearSystemId::DCMotorSystem(
                         motorModel,
-                        0.001_kg_sq_m,
+                        simMomentOfIntertia,
                         1
                     ),
                     motorModel

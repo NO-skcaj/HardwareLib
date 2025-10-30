@@ -29,11 +29,11 @@ namespace motor
     {
         public:
 
-            inline TalonFX(CANid_t CANid, MotorConfiguration config, frc::DCMotor motorModel) 
+            inline TalonFX(CANid_t CANid, MotorConfiguration config, frc::DCMotor motorModel, units::kilogram_square_meter_t simMomentOfIntertia = 0.001_kg_sq_m) 
                 : Motor{frc::sim::DCMotorSim{
                     frc::LinearSystemId::DCMotorSystem(
                             motorModel,
-                            0.001_kg_sq_m,
+                            simMomentOfIntertia,
                             1
                         ),
                         motorModel

@@ -14,21 +14,20 @@
 
 #include "subsystem/Swerve.h"
 #include "subsystem/Volcano.h"
-
 #include "subsystem/Gyro.h"
 
 #include "Constants.h"
 
 // DRIVEEEEEEEEEEEE
 
-inline frc2::CommandPtr ChassisZeroHeading(Swerve* instance)
+inline frc2::CommandPtr ChassisZeroHeading(Gyro* instance)
 {
     return frc2::FunctionalCommand{
         [] () { },
         [] () {  },
-        [] (bool interupted) { Gyro::GetInstance()->ResetYaw(); },
+        [instance] (bool interupted) { instance->ResetYaw(); },
         [] () { return true; },
-        {instance}
+        {}
     }.ToPtr();
 }
 

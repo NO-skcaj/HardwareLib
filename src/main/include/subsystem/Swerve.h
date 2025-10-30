@@ -19,10 +19,10 @@
 
 #include <frc/estimator/SwerveDrivePoseEstimator.h>
 
-#include "lib/hardware/gyro/Navx.h"
 #include "lib/subsystem/SwerveModule.h"
 
-// #include "lib/hardware/vision/PhotonVision.h"
+#include "subsystem/Vision.h"
+#include "subsystem/Gyro.h"
 
 #include "Constants.h"
 
@@ -53,12 +53,14 @@ class Swerve : public frc2::SubsystemBase
             m_swerveModules[1].SetDesiredState(m_desiredStates[1]);
             m_swerveModules[2].SetDesiredState(m_desiredStates[2]);
             m_swerveModules[3].SetDesiredState(m_desiredStates[3]);
+
+            if (frc::RobotBase::IsSimulation())
+                Gyro::GetInstance()->SimPeriodic(speeds.omega);
         }
 
         inline void Periodic() override
         {
             // This method will be called once per scheduler run
-
             m_loggedModuleStatePublisher.Set(
                 wpi::array<frc::SwerveModuleState, 4>{
                     m_swerveModules[0].GetState(),
@@ -67,6 +69,8 @@ class Swerve : public frc2::SubsystemBase
                     m_swerveModules[3].GetState()
                 }
             );
+
+            m_loggedPosePublisher.Set( GetPose2d() );
 
             OdometryPeriodic();
         }
@@ -92,19 +96,47 @@ class Swerve : public frc2::SubsystemBase
         inline wpi::array<frc::SwerveModuleState, 4> GetModuleStates()
         {
             // Return the swerve module states
-            return {m_swerveModules[0].GetState(),
-                    m_swerveModules[1].GetState(),
-                    m_swerveModules[2].GetState(),
-                    m_swerveModules[3].GetState()};
+            std::array<frc::SwerveModuleState, 4> states =
+            {
+                m_swerveModules[0].GetState(),
+                m_swerveModules[1].GetState(),
+                m_swerveModules[2].GetState(),
+                m_swerveModules[3].GetState()
+            };
+
+            if (frc::RobotBase::IsSimulation())
+            {
+                for (auto state : states)
+                {
+                    state = {state.speed / constants::swerve::RobotSwerveConfig.driveConversion.value(), 
+                             state.angle / constants::swerve::RobotSwerveConfig.angleConversion.value()};
+                }
+            }
+
+            return states;
         }
 
         std::array<frc::SwerveModulePosition, 4> GetModulePositions()
         {
             // Return the swerve module states
-            return {m_swerveModules[0].GetPosition(),
-                    m_swerveModules[1].GetPosition(),
-                    m_swerveModules[2].GetPosition(),
-                    m_swerveModules[3].GetPosition()};
+            std::array<frc::SwerveModulePosition, 4> positions =
+            {
+                m_swerveModules[0].GetPosition(),
+                m_swerveModules[1].GetPosition(),
+                m_swerveModules[2].GetPosition(),
+                m_swerveModules[3].GetPosition()
+            };
+
+            if (frc::RobotBase::IsSimulation())
+            {
+                for (auto position : positions)
+                {
+                    position = {position.distance        / constants::swerve::RobotSwerveConfig.driveConversion.value(), 
+                                position.angle / constants::swerve::RobotSwerveConfig.angleConversion.value()};
+                }
+            }
+
+            return positions;
         }
 
         inline void FlipFieldCentric()
@@ -114,7 +146,7 @@ class Swerve : public frc2::SubsystemBase
 
         frc::Rotation2d GetHeading()
         {
-            return hardware::gyro::Navx::GetInstance()->GetRotation().ToRotation2d();
+            return Gyro::GetInstance()->GetRotation().ToRotation2d();
         }
 
         frc::Pose2d GetPose2d()
@@ -139,6 +171,12 @@ class Swerve : public frc2::SubsystemBase
                 },
                 m_poseEstimator{m_kinematics, frc::Rotation2d(), std::array<frc::SwerveModulePosition, 4>{}, frc::Pose2d()},
                 m_isFieldRelative{true},
+
+                m_vision{
+                [this] (frc::Pose2d pose, units::second_t timestamp, Eigen::Matrix<double, 3, 1> stddevs)
+                {
+                    m_poseEstimator.AddVisionMeasurement(pose, timestamp, {stddevs[0], stddevs[1], stddevs[2]});
+                }},
                 
                 m_loggedModuleStatePublisher{nt::NetworkTableInstance::GetDefault().GetStructArrayTopic<frc::SwerveModuleState>("/Data/SwerveStates").Publish()},
                 m_loggedPosePublisher{nt::NetworkTableInstance::GetDefault().GetStructTopic<frc::Pose2d>("/Data/CurrentPose").Publish()},
@@ -156,19 +194,16 @@ class Swerve : public frc2::SubsystemBase
                 GetModulePositions()
             );
 
-            // // Update with vision measurements if available
-            // std::optional<std::pair<frc::Pose2d, units::second_t>> visionPose = PhotonVision::GetInstance()->GetResult();
-            // if (visionPose)
-            //     m_poseEstimator.AddVisionMeasurement(visionPose.value().first, visionPose.value().second, PhotonVision::GetInstance()->GetEstimationStdDevs(visionPose.value().first));
+            m_vision.Periodic();
         }
 
         frc::SwerveDriveKinematics<4>           m_kinematics;
-
         std::array<subsystem::SwerveModule, 4>  m_swerveModules;
         
         frc::SwerveDrivePoseEstimator<4>        m_poseEstimator;   
-
         bool                                    m_isFieldRelative;
+
+        PhotonVision                            m_vision;
 
         nt::StructArrayPublisher<frc::SwerveModuleState> m_loggedModuleStatePublisher;
         nt::StructPublisher<frc::Pose2d>                 m_loggedPosePublisher;

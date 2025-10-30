@@ -23,7 +23,7 @@ Controller::Controller()
 
     // Configure the operator controller
     std::pair<Button, frc2::CommandPtr> runOnceControls[] = {
-        {constants::controller::A,           ChassisZeroHeading(m_swerve)},
+        {constants::controller::A,           ChassisZeroHeading(Gyro::GetInstance())},
         {constants::controller::B,           FlipFieldCentricity(m_swerve)},
         {constants::controller::RightBumper, VolcanoFlywheelOn(m_volcano)},
         {constants::controller::LeftBumper,  VolcanoFlywheelOff(m_volcano)}

@@ -1,18 +1,12 @@
 #include "lib/hardware/gyro/Navx.h"
-
+#include <frc/smartdashboard/SmartDashboard.h>
 
 using namespace hardware::gyro;
 
 
 frc::Rotation3d Navx::GetRotation()
 {
-    if (frc::RobotBase::IsSimulation())
-    {
-        return frc::Rotation3d{m_simYaw, 0_deg, 0_deg} + m_offset;
-    } else
-    {
         return m_gyro.GetRotation3d() + m_offset;
-    }
 }
 
 frc::Rotation3d Navx::GetOffset()
@@ -23,6 +17,7 @@ frc::Rotation3d Navx::GetOffset()
 void Navx::ResetYaw()
 {
     m_gyro.Reset();
+    m_simYaw = 0_rad;
 }
 
 void Navx::SetOffset(frc::Rotation3d offset)
@@ -33,5 +28,6 @@ void Navx::SetOffset(frc::Rotation3d offset)
 void Navx::SimPeriodic(units::radians_per_second_t rate)
 {
     m_simRate = rate;
-    m_simYaw += m_simRate * 0.02_s; // assuming 20ms loop time
+    m_simYaw += units::radian_t{m_simRate.value()}; // assuming 20ms loop time
+    SetOffset(frc::Rotation3d{m_simYaw, 0_rad, 0_rad});
 }

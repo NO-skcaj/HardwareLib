@@ -14,7 +14,8 @@ SwerveModule::SwerveModule(int driveMotorCanId, int angleMotorCanId, int angleEn
                            hardware::motor::MotorConfiguration turnConfig, hardware::motor::MotorConfiguration driveConfig,
                            units::meter_t  driveMotorConversion,
                            units::radian_t angleMotorConversion)
-    :   m_driveMotor          {driveMotorCanId, driveConfig, frc::DCMotor::KrakenX60()},
+
+    :   m_driveMotor          {driveMotorCanId, driveConfig, frc::DCMotor::KrakenX60()}, // Those two strange numbers are the MOI or moments of inertias. Its for simulation, and its not accurate of the actual bot
         m_angleMotor          {angleMotorCanId, turnConfig,  frc::DCMotor::NEO()},
         m_angleAbsoluteEncoder{angleEncoderCanId},
         m_driveConversion{frc::RobotBase::IsSimulation() ? 1_m   : driveMotorConversion},
